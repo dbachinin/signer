@@ -2,8 +2,8 @@
 require File.expand_path('../lib/signer/version', __FILE__)
 
 Gem::Specification.new do |gem|
-  gem.authors       = ["Edgars Beigarts"]
-  gem.email         = ["edgars.beigarts@gmail.com"]
+  gem.authors       = ["Edgars Beigarts", "Dmitry Bachinin"]
+  gem.email         = ["edgars.beigarts@gmail.com", "dbachinin@gmail.com"]
   gem.description   = %q{WS Security XML signer}
   gem.summary       = gem.description
   gem.homepage      = ""
