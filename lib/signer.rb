@@ -8,7 +8,7 @@ require "signer/version"
 
 class Signer
   attr_accessor :document, :private_key, :signature_algorithm_id, :ds_namespace_prefix, :wss
-  attr_reader :cert
+  attr_reader :cert, :signed_info_prefix
   attr_writer :security_node, :signature_node, :security_token_id
 
   WSU_NAMESPACE = 'http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd'.freeze
@@ -164,15 +164,15 @@ class Signer
     unless node
       node = Nokogiri::XML::Node.new('SignedInfo', document)
       signature_node.add_child(node)
-      set_namespace_for_node(node, DS_NAMESPACE, ds_namespace_prefix)
+      set_namespace_for_node(node, DS_NAMESPACE, signed_info_prefix)
       canonicalization_method_node = Nokogiri::XML::Node.new('CanonicalizationMethod', document)
       canonicalization_method_node['Algorithm'] = canonicalize_id
       node.add_child(canonicalization_method_node)
-      set_namespace_for_node(canonicalization_method_node, DS_NAMESPACE, ds_namespace_prefix)
+      set_namespace_for_node(canonicalization_method_node, DS_NAMESPACE, signed_info_prefix)
       signature_method_node = Nokogiri::XML::Node.new('SignatureMethod', document)
       signature_method_node['Algorithm'] = self.signature_algorithm_id
       node.add_child(signature_method_node)
-      set_namespace_for_node(signature_method_node, DS_NAMESPACE, ds_namespace_prefix)
+      set_namespace_for_node(signature_method_node, DS_NAMESPACE, signed_info_prefix)
     end
     node
   end
@@ -301,6 +301,8 @@ class Signer
     else
       id = options[:id] || target_node['Id']
     end
+
+    @signed_info_prefix = options[:signed_info_prefix] || ds_namespace_prefix
 
     target_canon = canonicalize(target_node, options[:inclusive_namespaces])
     target_digest = Base64.encode64(@digester.digest(target_canon)).strip
