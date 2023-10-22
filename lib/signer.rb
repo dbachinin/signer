@@ -146,7 +146,13 @@ class Signer
     @signature_node ||= begin
       @signature_node = security_node.at_xpath('ds:Signature', ds: DS_NAMESPACE)
       unless @signature_node
-        @signature_node = Nokogiri::XML::Node.new('Signature', document)
+
+        @signature_node = if signed_info_prefix.present?
+          Nokogiri::XML::Node.new("#{signed_info_prefix}:Signature", document)
+        else
+          Nokogiri::XML::Node.new('Signature', document)
+        end
+
         set_namespace_for_node(@signature_node, DS_NAMESPACE, ds_namespace_prefix)
         security_node.add_child(@signature_node)
       end
@@ -162,14 +168,41 @@ class Signer
   def signed_info_node
     node = signature_node.at_xpath('ds:SignedInfo', ds: DS_NAMESPACE)
     unless node
-      node = Nokogiri::XML::Node.new('SignedInfo', document)
+      is_have_prefix = signed_info_prefix.present?
+
+      key_name = if is_have_prefix
+        "#{signed_info_prefix}:SignedInfo"
+      else
+        'SignedInfo'
+      end
+
+      node = Nokogiri::XML::Node.new(key_name, document)
+
+      if is_have_prefix
+        node.add_namespace_definition(signed_info_prefix, DS_NAMESPACE)
+      end
+
       signature_node.add_child(node)
       set_namespace_for_node(node, DS_NAMESPACE, signed_info_prefix)
-      canonicalization_method_node = Nokogiri::XML::Node.new('CanonicalizationMethod', document)
+
+      key_name = if is_have_prefix
+        "#{signed_info_prefix}:CanonicalizationMethod"
+      else
+        'CanonicalizationMethod'
+      end
+
+      canonicalization_method_node = Nokogiri::XML::Node.new(key_name, document)
       canonicalization_method_node['Algorithm'] = canonicalize_id
       node.add_child(canonicalization_method_node)
       set_namespace_for_node(canonicalization_method_node, DS_NAMESPACE, signed_info_prefix)
-      signature_method_node = Nokogiri::XML::Node.new('SignatureMethod', document)
+
+      key_name = if is_have_prefix
+        "#{signed_info_prefix}:SignatureMethod"
+      else
+        'SignatureMethod'
+      end
+
+      signature_method_node = Nokogiri::XML::Node.new(key_name, document)
       signature_method_node['Algorithm'] = self.signature_algorithm_id
       node.add_child(signature_method_node)
       set_namespace_for_node(signature_method_node, DS_NAMESPACE, signed_info_prefix)
@@ -295,11 +328,11 @@ class Signer
         wsu_ns ||= namespace_prefix(target_node, WSU_NAMESPACE, 'wsu')
         target_node["#{wsu_ns}:Id"] = id.to_s
       end
-    elsif target_node['Id'].nil?
+    elsif target_node['Id'].nil? && target_node['ID'].nil? && options[:skip_set_id].blank?
       id = options[:id] || "_#{Digest::SHA1.hexdigest(target_node.to_s)}"
       target_node['Id'] = id.to_s unless id.empty?
     else
-      id = options[:id] || target_node['Id']
+      id = options[:id] || target_node['Id'] || target_node['ID']
     end
 
     @signed_info_prefix = options[:signed_info_prefix] || ds_namespace_prefix
@@ -307,27 +340,51 @@ class Signer
     target_canon = canonicalize(target_node, options[:inclusive_namespaces])
     target_digest = Base64.encode64(@digester.digest(target_canon)).strip
 
-    reference_node = Nokogiri::XML::Node.new('Reference', document)
+    key_name = if signed_info_prefix.present?
+      "#{signed_info_prefix}:Reference"
+    else
+      'Reference'
+    end
+
+    reference_node = Nokogiri::XML::Node.new(key_name, document)
     reference_node['URI'] = id.to_s.size > 0 ? "##{id}" : ""
     reference_node['Type'] = options[:ref_type] if options[:ref_type]
 
     signed_info_node.add_child(reference_node)
     set_namespace_for_node(reference_node, DS_NAMESPACE, ds_namespace_prefix)
 
-    transforms_node = Nokogiri::XML::Node.new('Transforms', document)
+    key_name = if signed_info_prefix.present?
+      "#{signed_info_prefix}:Transforms"
+    else
+      'Transforms'
+    end
+
+    transforms_node = Nokogiri::XML::Node.new(key_name, document)
     reference_node.add_child(transforms_node) unless options[:no_transform]
     set_namespace_for_node(transforms_node, DS_NAMESPACE, ds_namespace_prefix)
 
     # create reference + transforms node
     transform!(transforms_node, options)
 
-    digest_method_node = Nokogiri::XML::Node.new('DigestMethod', document)
+    key_name = if signed_info_prefix.present?
+      "#{signed_info_prefix}:DigestMethod"
+    else
+      'DigestMethod'
+    end
+
+    digest_method_node = Nokogiri::XML::Node.new(key_name, document)
     digest_method_node['Algorithm'] = @digester.digest_id
 
     reference_node.add_child(digest_method_node)
     set_namespace_for_node(digest_method_node, DS_NAMESPACE, ds_namespace_prefix)
 
-    digest_value_node = Nokogiri::XML::Node.new('DigestValue', document)
+    key_name = if signed_info_prefix.present?
+      "#{signed_info_prefix}:DigestValue"
+    else
+      'DigestValue'
+    end
+
+    digest_value_node = Nokogiri::XML::Node.new(key_name, document)
     digest_value_node.content = target_digest
     reference_node.add_child(digest_value_node)
     set_namespace_for_node(digest_value_node, DS_NAMESPACE, ds_namespace_prefix)
@@ -367,7 +424,12 @@ class Signer
     signature = private_key.sign(@sign_digester.digester, signed_info_canon)
     signature_value_digest = Base64.encode64(signature).delete("\n")
 
-    signature_value_node = Nokogiri::XML::Node.new('SignatureValue', document)
+    signature_value_node = if options[:ns_prefix]
+      Nokogiri::XML::Node.new("#{DS_NAMESPACE}:SignatureValue", document)
+    else
+      Nokogiri::XML::Node.new('SignatureValue', document)
+    end
+
     signature_value_node.content = signature_value_digest
     signed_info_node.add_next_sibling(signature_value_node)
     set_namespace_for_node(signature_value_node, DS_NAMESPACE, ds_namespace_prefix)
@@ -378,7 +440,13 @@ class Signer
 
   # Create transform nodes
   def transform_node(algorithm, options)
-    transform_node = Nokogiri::XML::Node.new('Transform', document)
+
+    transform_node = if signed_info_prefix.present?
+      Nokogiri::XML::Node.new("#{signed_info_prefix}:Transform", document)
+    else
+      Nokogiri::XML::Node.new('Transform', document)
+    end
+
     set_namespace_for_node(transform_node, DS_NAMESPACE, ds_namespace_prefix)
     transform_node['Algorithm'] = algorithm
 
