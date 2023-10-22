@@ -422,11 +422,7 @@ class Signer
     signature = private_key.sign(@sign_digester.digester, signed_info_canon)
     signature_value_digest = Base64.encode64(signature).delete("\n")
 
-    signature_value_node = if options[:ns_prefix]
-      Nokogiri::XML::Node.new("#{signed_info_prefix}:SignatureValue", document)
-    else
-      Nokogiri::XML::Node.new('SignatureValue', document)
-    end
+    signature_value_node = Nokogiri::XML::Node.new('SignatureValue', document)
 
     signature_value_node.content = signature_value_digest
     signed_info_node.add_next_sibling(signature_value_node)
