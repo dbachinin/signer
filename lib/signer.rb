@@ -149,12 +149,7 @@ class Signer
       # @signature_node ||= security_node.at_xpath("#{ds_namespace_prefix}:Signature", ds: DS_NAMESPACE)
 
       unless @signature_node
-
-        @signature_node = if ds_namespace_prefix.present?
-          Nokogiri::XML::Node.new("#{ds_namespace_prefix}:Signature", document)
-        else
-          Nokogiri::XML::Node.new('Signature', document)
-        end
+        @signature_node = Nokogiri::XML::Node.new('Signature', document)
 
         set_namespace_for_node(@signature_node, DS_NAMESPACE, ds_namespace_prefix)
         security_node.add_child(@signature_node)
@@ -428,7 +423,7 @@ class Signer
     signature_value_digest = Base64.encode64(signature).delete("\n")
 
     signature_value_node = if options[:ns_prefix]
-      Nokogiri::XML::Node.new("#{DS_NAMESPACE}:SignatureValue", document)
+      Nokogiri::XML::Node.new("#{signed_info_prefix}:SignatureValue", document)
     else
       Nokogiri::XML::Node.new('SignatureValue', document)
     end
@@ -444,11 +439,7 @@ class Signer
   # Create transform nodes
   def transform_node(algorithm, options)
 
-    transform_node = if ds_namespace_prefix.present?
-      Nokogiri::XML::Node.new("#{ds_namespace_prefix}:Transform", document)
-    else
-      Nokogiri::XML::Node.new('Transform', document)
-    end
+    transform_node = Nokogiri::XML::Node.new('Transform', document)
 
     set_namespace_for_node(transform_node, DS_NAMESPACE, ds_namespace_prefix)
     transform_node['Algorithm'] = algorithm
