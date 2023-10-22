@@ -146,7 +146,7 @@ class Signer
     @signature_node ||= begin
 
       @signature_node = security_node.at_xpath('ds:Signature', ds: DS_NAMESPACE)
-      @signature_node ||= security_node.at_xpath("#{ds_namespace_prefix}:Signature", ds: DS_NAMESPACE)
+      # @signature_node ||= security_node.at_xpath("#{ds_namespace_prefix}:Signature", ds: DS_NAMESPACE)
 
       unless @signature_node
 
