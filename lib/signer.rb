@@ -144,11 +144,14 @@ class Signer
   # <Signature xmlns="http://www.w3.org/2000/09/xmldsig#">
   def signature_node
     @signature_node ||= begin
+
       @signature_node = security_node.at_xpath('ds:Signature', ds: DS_NAMESPACE)
+      @signature_node ||= security_node.at_xpath("#{ds_namespace_prefix}:Signature", ds: DS_NAMESPACE)
+
       unless @signature_node
 
-        @signature_node = if signed_info_prefix.present?
-          Nokogiri::XML::Node.new("#{signed_info_prefix}:Signature", document)
+        @signature_node = if ds_namespace_prefix.present?
+          Nokogiri::XML::Node.new("#{ds_namespace_prefix}:Signature", document)
         else
           Nokogiri::XML::Node.new('Signature', document)
         end
@@ -441,8 +444,8 @@ class Signer
   # Create transform nodes
   def transform_node(algorithm, options)
 
-    transform_node = if signed_info_prefix.present?
-      Nokogiri::XML::Node.new("#{signed_info_prefix}:Transform", document)
+    transform_node = if ds_namespace_prefix.present?
+      Nokogiri::XML::Node.new("#{ds_namespace_prefix}:Transform", document)
     else
       Nokogiri::XML::Node.new('Transform', document)
     end
