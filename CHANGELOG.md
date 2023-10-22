@@ -1,3 +1,7 @@
+## 1.10.1 (2023-10-22)
+
+- Add custom prefix for SignedInfo
+
 ## 1.10.1 (2023-10-20)
 
 - Add custom prefix for SignedInfo
