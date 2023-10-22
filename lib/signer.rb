@@ -437,7 +437,7 @@ class Signer
 
     transform_node = Nokogiri::XML::Node.new('Transform', document)
 
-    set_namespace_for_node(transform_node, DS_NAMESPACE, ds_namespace_prefix)
+    set_namespace_for_node(transform_node, DS_NAMESPACE, signed_info_prefix)
     transform_node['Algorithm'] = algorithm
 
     if options[:inclusive_namespaces]
