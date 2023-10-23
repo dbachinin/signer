@@ -411,7 +411,7 @@ class Signer
     end
 
     if options[:issuer_serial]
-      x509_data_node(options[:issuer_in_security_token])
+      x509_data_node(options)
     end
 
     if options[:inclusive_namespaces]
