@@ -255,22 +255,24 @@ class Signer
   #   </X509Data>
   # </SecurityTokenReference> (optional)
   # </KeyInfo>
-  def x509_data_node(issuer_in_security_token = false)
-    issuer_name_node   = Nokogiri::XML::Node.new('X509IssuerName', document)
-    issuer_name_node.content = cert.issuer.to_s(OpenSSL::X509::Name::RFC2253)
+  def x509_data_node(issuer_in_security_token: false, skip_issuer_serial: false)
+    unless skip_issuer_serial
+      issuer_name_node   = Nokogiri::XML::Node.new('X509IssuerName', document)
+      issuer_name_node.content = cert.issuer.to_s(OpenSSL::X509::Name::RFC2253)
 
-    issuer_number_node = Nokogiri::XML::Node.new('X509SerialNumber', document)
-    issuer_number_node.content = cert.serial
+      issuer_number_node = Nokogiri::XML::Node.new('X509SerialNumber', document)
+      issuer_number_node.content = cert.serial
 
-    issuer_serial_node = Nokogiri::XML::Node.new('X509IssuerSerial', document)
-    issuer_serial_node.add_child(issuer_name_node)
-    issuer_serial_node.add_child(issuer_number_node)
+      issuer_serial_node = Nokogiri::XML::Node.new('X509IssuerSerial', document)
+      issuer_serial_node.add_child(issuer_name_node)
+      issuer_serial_node.add_child(issuer_number_node)
+    end
 
     cetificate_node    = Nokogiri::XML::Node.new('X509Certificate', document)
     cetificate_node.content = Base64.encode64(cert.to_der).delete("\n")
 
     data_node          = Nokogiri::XML::Node.new('X509Data', document)
-    data_node.add_child(issuer_serial_node)
+    data_node.add_child(issuer_serial_node) unless skip_issuer_serial
     data_node.add_child(cetificate_node)
 
     if issuer_in_security_token
@@ -286,10 +288,13 @@ class Signer
     set_namespace_for_node(key_info_node, DS_NAMESPACE, ds_namespace_prefix)
     set_namespace_for_node(security_token_reference_node, WSSE_NAMESPACE, ds_namespace_prefix) if issuer_in_security_token
     set_namespace_for_node(data_node, DS_NAMESPACE, ds_namespace_prefix)
-    set_namespace_for_node(issuer_serial_node, DS_NAMESPACE, ds_namespace_prefix)
     set_namespace_for_node(cetificate_node, DS_NAMESPACE, ds_namespace_prefix)
-    set_namespace_for_node(issuer_name_node, DS_NAMESPACE, ds_namespace_prefix)
-    set_namespace_for_node(issuer_number_node, DS_NAMESPACE, ds_namespace_prefix)
+
+    unless skip_issuer_serial
+      set_namespace_for_node(issuer_serial_node, DS_NAMESPACE, ds_namespace_prefix)
+      set_namespace_for_node(issuer_name_node, DS_NAMESPACE, ds_namespace_prefix)
+      set_namespace_for_node(issuer_number_node, DS_NAMESPACE, ds_namespace_prefix)
+    end
 
     data_node
   end
