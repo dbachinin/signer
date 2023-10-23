@@ -412,7 +412,7 @@ class Signer
 
     if options[:issuer_serial]
       x509_data_node(issuer_in_security_token: options[:issuer_in_security_token],
-      skip_issuer_serial: issuer_in_security_token[:skip_issuer_serial])
+      skip_issuer_serial: options[:skip_issuer_serial])
     end
 
     if options[:inclusive_namespaces]
